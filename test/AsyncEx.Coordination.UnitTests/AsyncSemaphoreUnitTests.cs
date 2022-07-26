@@ -12,6 +12,34 @@ namespace UnitTests
     public class AsyncSemaphoreUnitTests
     {
         [Fact]
+        public void Ctor_WhereInitialCountIsLessThanZero_ThrowsArgumentOutOfRangeException()
+        {
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => new AsyncSemaphore(-1));
+            Assert.Equal("initialCount", exception.ParamName);
+        }
+
+        [Fact]
+        public void Ctor_WhereMaximumCountIsLessThanZero_ThrowsArgumentOutOfRangeException()
+        {
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => new AsyncSemaphore(-1, -1, null));
+            Assert.Equal("maximumCount", exception.ParamName);
+        }
+
+        [Fact]
+        public void Ctor_WhereInitialCountIsLessThanZeroAndQueueIsNull_ThrowsArgumentOutOfRangeException()
+        {
+            var exception = Assert.Throws<ArgumentOutOfRangeException>(() => new AsyncSemaphore(-1, 0, null));
+            Assert.Equal("initialCount", exception.ParamName);
+        }
+
+        [Fact]
+        public void Ctor_WhereInitialCountIsGreaterThanMaximumCount_ThrowsArgumentException()
+        {
+            var exception = Assert.Throws<ArgumentException>(() => new AsyncSemaphore(1, 0, null));
+            Assert.Equal("initialCount", exception.ParamName);
+        }
+
+        [Fact]
         public async Task WaitAsync_NoSlotsAvailable_IsNotCompleted()
         {
             var semaphore = new AsyncSemaphore(0);
@@ -123,6 +151,45 @@ namespace UnitTests
             Assert.Equal(1, semaphore.CurrentCount);
             semaphore.Release(0);
             Assert.Equal(1, semaphore.CurrentCount);
+        }
+
+        [Fact]
+        public void Set_MaximumCount_ToLessThanZero_ThrowsArgumentOutOfRangeException()
+        {
+            var semaphore = new AsyncSemaphore(1);
+            Assert.Equal(1, semaphore.CurrentCount);
+            Assert.Throws<ArgumentOutOfRangeException>(() => semaphore.MaximumCount = -1);
+        }
+
+        [Fact]
+        public void Set_MaximumCount_ToLowerValue_DecrementsCount()
+        {
+            var semaphore = new AsyncSemaphore(1);
+            Assert.Equal((1, 1), semaphore.AllCount);
+            semaphore.MaximumCount = 0;
+            Assert.Equal((0, 0), semaphore.AllCount);
+        }
+
+        [Fact]
+        public void Set_MaximumCount_ToHigherValue_WithoutWaiters_IncrementsCount()
+        {
+            var semaphore = new AsyncSemaphore(1);
+            Assert.Equal((1, 1), semaphore.AllCount);
+            semaphore.MaximumCount = 2;
+            Assert.Equal((2, 2), semaphore.AllCount);
+        }
+
+        [Fact]
+        public async Task Set_MaximumCount_ToHigherValue_WithWaiters_ReleasesWaiters()
+        {
+            var semaphore = new AsyncSemaphore(0);
+            Assert.Equal(0, semaphore.CurrentCount);
+            var task = semaphore.WaitAsync();
+            Assert.Equal(0, semaphore.CurrentCount);
+            Assert.False(task.IsCompleted);
+            semaphore.MaximumCount = 1;
+            Assert.Equal(0, semaphore.CurrentCount);
+            await task;
         }
 
         [Fact]

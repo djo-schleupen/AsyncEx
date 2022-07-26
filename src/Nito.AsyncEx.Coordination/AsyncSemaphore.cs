@@ -11,7 +11,7 @@ namespace Nito.AsyncEx
     /// <summary>
     /// An async-compatible semaphore. Alternatively, you could use <c>SemaphoreSlim</c>.
     /// </summary>
-    [DebuggerDisplay("Id = {Id}, CurrentCount = {_count}")]
+    [DebuggerDisplay("Id = {Id}, CurrentCount = {_count}, MaximumCount = {_maximumCount}, WaitQueue.IsEmpty = {_queue.IsEmpty}")]
     [DebuggerTypeProxy(typeof(DebugView))]
     public sealed class AsyncSemaphore
     {
@@ -26,6 +26,11 @@ namespace Nito.AsyncEx
         private long _count;
 
         /// <summary>
+        /// The maximum number of waits that may be immediately granted at any time.
+        /// </summary>
+        private long _maximumCount;
+
+        /// <summary>
         /// The semi-unique identifier for this instance. This is 0 if the id has not yet been created.
         /// </summary>
         private int _id;
@@ -38,13 +43,32 @@ namespace Nito.AsyncEx
         /// <summary>
         /// Creates a new async-compatible semaphore with the specified initial count.
         /// </summary>
-        /// <param name="initialCount">The initial count for this semaphore. This must be greater than or equal to zero.</param>
+        /// <param name="initialCount">The initial count for this semaphore.</param>
+        /// <param name="maximumCount">The maximum count for this semaphore. This must be greater than or equal to zero.</param>
         /// <param name="queue">The wait queue used to manage waiters. This may be <c>null</c> to use a default (FIFO) queue.</param>
-        internal AsyncSemaphore(long initialCount, IAsyncWaitQueue<object>? queue)
+        internal AsyncSemaphore(long initialCount, long maximumCount, IAsyncWaitQueue<object>? queue)
         {
+            if (maximumCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(maximumCount), "Must be greater than or equal to 0.");
+            if (initialCount > maximumCount)
+                throw new ArgumentException($"Must be less than or equal to {nameof(maximumCount)}.", nameof(initialCount));
+            if (initialCount < 0 && queue == null)
+                throw new ArgumentOutOfRangeException(nameof(initialCount), $"Must be greater than or equal to 0, unless {nameof(queue)} is non-null.");
+
             _queue = queue ?? new DefaultAsyncWaitQueue<object>();
             _count = initialCount;
+            _maximumCount = maximumCount;
             _mutex = new object();
+        }
+
+        /// <summary>
+        /// Creates a new async-compatible semaphore with the specified initial count.
+        /// </summary>
+        /// <param name="initialCount">The initial count for this semaphore.</param>
+        /// <param name="queue">The wait queue used to manage waiters. This may be <c>null</c> to use a default (FIFO) queue.</param>
+        internal AsyncSemaphore(long initialCount, IAsyncWaitQueue<object>? queue)
+            : this(initialCount, Math.Max(initialCount, 0), queue)
+        {
         }
 
         /// <summary>
@@ -73,6 +97,38 @@ namespace Nito.AsyncEx
         }
 
         /// <summary>
+        /// Gets the maximum number of slots potentially available on this semaphore.
+        /// </summary>
+        public long MaximumCount
+        {
+            get { lock (_mutex) { return _maximumCount; } }
+            set {
+                lock (_mutex)
+                {
+                    if (value < 0)
+                        throw new ArgumentOutOfRangeException(nameof(MaximumCount), "Must be greater than or equal to 0.");
+
+                    _count += (value - _maximumCount);
+                    _maximumCount = value;
+
+                    while (_count > 0 && !_queue.IsEmpty)
+                    {
+                        _queue.Dequeue();
+                        --_count;
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Gets the current and maximum number of slots available on this semaphore.
+        /// </summary>
+        public (long CurrentCount, long MaximumCount) AllCount
+        {
+            get { lock (_mutex) { return (_count, _maximumCount); } }
+        }
+
+        /// <summary>
         /// Asynchronously waits for a slot in the semaphore to be available.
         /// </summary>
         /// <param name="cancellationToken">The cancellation token used to cancel the wait. If this is already set, then this method will attempt to take the slot immediately (succeeding if a slot is currently available).</param>
@@ -82,7 +138,7 @@ namespace Nito.AsyncEx
             lock (_mutex)
             {
                 // If the semaphore is available, take it immediately and return.
-                if (_count != 0)
+                if (_count > 0)
                 {
                     --_count;
                     ret = TaskConstants.Completed;
@@ -127,6 +183,8 @@ namespace Nito.AsyncEx
         /// </summary>
         public void Release(long releaseCount)
         {
+            if (releaseCount < 0)
+                throw new ArgumentOutOfRangeException(nameof(releaseCount), "Must be greater than 0.");
             if (releaseCount == 0)
                 return;
 
@@ -205,6 +263,8 @@ namespace Nito.AsyncEx
             public int Id { get { return _semaphore.Id; } }
 
             public long CurrentCount { get { return _semaphore._count; } }
+
+            public long MaximumCount { get { return _semaphore._maximumCount; } }
 
             public IAsyncWaitQueue<object> WaitQueue { get { return _semaphore._queue; } }
         }
