@@ -75,6 +75,16 @@ namespace Nito.AsyncEx
         /// Creates a new async-compatible semaphore with the specified initial count.
         /// </summary>
         /// <param name="initialCount">The initial count for this semaphore. This must be greater than or equal to zero.</param>
+        /// <param name="maximumCount">The maximum count for this semaphore. This must be greater than or equal to <paramref name="initialCount"/>.</param>
+        public AsyncSemaphore(long initialCount, long maximumCount)
+            : this(initialCount, maximumCount, null)
+        {
+        }
+
+        /// <summary>
+        /// Creates a new async-compatible semaphore with the specified initial count.
+        /// </summary>
+        /// <param name="initialCount">The initial count for this semaphore. This must be greater than or equal to zero.</param>
         public AsyncSemaphore(long initialCount)
             : this(initialCount, null)
         {
