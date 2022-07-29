@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
-    <VersionPrefix>5.1.2</VersionPrefix>
-    <Authors>Stephen Cleary</Authors>
+    <VersionPrefix>5.1.2-schleupen</VersionPrefix>
+    <Authors>Stephen Cleary, extensions by Schleupen SE</Authors>
     <PackageTags>task;async</PackageTags>
     <RootNamespace>Nito.AsyncEx</RootNamespace>
   </PropertyGroup>

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Title>Async and Task Helpers</Title>
@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Nito.Cancellation" Version="1.1.2" />
+    <PackageReference Include="Nito.Cancellation" Version="1.1.2-schleupen" />
   </ItemGroup>
 
   <ItemGroup>
@@ -20,4 +20,10 @@
     <ProjectReference Include="..\Nito.AsyncEx.Tasks\Nito.AsyncEx.Tasks.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Update="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" />
+    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.1.1" />
+  </ItemGroup>
+
+  <Import Project="..\..\Schleupen.targets" />
 </Project>

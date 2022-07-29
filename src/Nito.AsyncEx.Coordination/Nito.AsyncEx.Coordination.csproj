@@ -8,11 +8,17 @@
 
   <ItemGroup>
 	<PackageReference Include="System.ValueTuple" Version="4.5.0" />
-    <PackageReference Include="Nito.Collections.Deque" Version="1.1.1" />
+    <PackageReference Include="Nito.Collections.Deque" Version="1.1.1-schleupen" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Nito.AsyncEx.Tasks\Nito.AsyncEx.Tasks.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Update="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" />
+    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.1.1" />
+  </ItemGroup>
+	 
+  <Import Project="..\..\Schleupen.targets" />
 </Project>
